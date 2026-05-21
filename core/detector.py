@@ -7,7 +7,7 @@ import time
 import cv2
 import numpy as np
 from pathlib import Path
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import Optional, List, Dict, Iterable, TYPE_CHECKING
 
 try:
     from ultralytics import YOLO
@@ -30,6 +30,7 @@ class YOLODetector:
         model_path: str = "yolo_dataset/runs/detect/train/weights/best.pt",
         conf_threshold: float = 0.5,
         device: str = "cuda",
+        expected_class_names: Optional[Iterable[str]] = None,
     ):
         if not HAS_YOLO:
             raise ImportError("ultralytics 未安装，请执行: pip install ultralytics torch")
@@ -37,7 +38,36 @@ class YOLODetector:
         self.conf_threshold = conf_threshold
         self.device = device if torch.cuda.is_available() else "cpu"
         self.model = self._load_model(model_path)
-        self.class_names = self.model.names if hasattr(self.model, "names") else {}
+        self.class_names = self._normalize_class_names(getattr(self.model, "names", {}))
+        self._log_model_info(model_path, expected_class_names)
+
+    @staticmethod
+    def _normalize_class_names(names) -> Dict[int, str]:
+        if isinstance(names, dict):
+            return {int(k): str(v) for k, v in names.items()}
+        if isinstance(names, (list, tuple)):
+            return {i: str(v) for i, v in enumerate(names)}
+        return {}
+
+    def _log_model_info(self, model_path: str, expected_class_names: Optional[Iterable[str]]):
+        if not self.class_names:
+            print(f"[YOLO] 模型已加载: {model_path}，但未读取到类别名称")
+            return
+
+        class_text = ", ".join(f"{cid}:{name}" for cid, name in sorted(self.class_names.items()))
+        print(f"[YOLO] 模型已加载: {model_path}")
+        print(f"[YOLO] 模型类别: {class_text}")
+
+        expected = {str(name) for name in (expected_class_names or []) if str(name).strip()}
+        if expected:
+            actual = set(self.class_names.values())
+            missing = sorted(expected - actual)
+            if missing:
+                print(
+                    "[YOLO] 警告: 当前模型缺少配置期望类别: "
+                    + ", ".join(missing)
+                    + "。外部模型可能可以加载，但不一定适合本项目任务。"
+                )
 
     def _load_model(self, model_path: str) -> YOLO:
         """加载 YOLO 模型。"""

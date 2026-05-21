@@ -3,7 +3,7 @@
 参考项目:
   SimuTouch:       SendInput via ctypes INPUT/MOUSEINPUT (最正规的 Windows API)
   AutoControl:     SendInput(move) + mouse_event(click) 混合、GetMessageExtraInfo
-  YOLOv11-CS:      PID 控制 + dead zone + 不瞎点
+  外部视觉辅助参考: PID 控制 + dead zone + 不瞎点
   hermes-agent:    two-tier 验证、DPI 修正、closed-loop retry
   mhxy_fz:         win32api.SetCursorPos + mouse_event 直连
   mhxy-escort:     迭代减速鼠标移动、坐标验证、点击后随机移开
@@ -162,7 +162,7 @@ def _click_si(x: int, y: int, btn: str = "left",
 
 
 def _send_rel(dx: int, dy: int) -> bool:
-    """SendInput 相对移动（参考 YOLOv11-CS: mouse_event RELATIVE）。"""
+    """SendInput 相对移动（参考游戏视觉辅助常见的相对移动方式）。"""
     return _send_input_ok(_mouse_input(dx, dy, MOUSEEVENTF_MOVE))
 
 
@@ -172,10 +172,26 @@ def _jitter(base: int, variance: int = 5) -> int:
     return base + random.randint(-variance, variance)
 
 
-def _jitter_point(x: int, y: int, variance: int = 5) -> tuple[int, int]:
-    if variance <= 0:
+def _clamp_point(
+    x: int,
+    y: int,
+    bounds: Optional[tuple[int, int, int, int]] = None,
+) -> tuple[int, int]:
+    if bounds is None:
         return x, y
-    return _jitter(x, variance), _jitter(y, variance)
+    left, top, right, bottom = bounds
+    return max(left, min(x, right)), max(top, min(y, bottom))
+
+
+def _jitter_point(
+    x: int,
+    y: int,
+    variance: int = 5,
+    bounds: Optional[tuple[int, int, int, int]] = None,
+) -> tuple[int, int]:
+    if variance <= 0:
+        return _clamp_point(x, y, bounds)
+    return _clamp_point(_jitter(x, variance), _jitter(y, variance), bounds)
 
 
 def get_pos() -> tuple[int, int]:
@@ -190,6 +206,26 @@ def get_pos() -> tuple[int, int]:
 def _set_pos(x: int, y: int) -> bool:
     """设置鼠标位置 — SendInput 优先（更底层）。"""
     return _set_pos_si(x, y)
+
+
+def _set_pos_precise(
+    x: int,
+    y: int,
+    tolerance: int = 2,
+    retries: int = 2,
+) -> bool:
+    """移动到目标点，并通过读回坐标做轻量修正。"""
+    if not _set_pos(x, y):
+        return False
+    for _ in range(max(0, retries)):
+        cx, cy = get_pos()
+        if abs(cx - x) <= tolerance and abs(cy - y) <= tolerance:
+            return True
+        if not _set_pos(x, y):
+            return False
+        time.sleep(0.01)
+    cx, cy = get_pos()
+    return abs(cx - x) <= tolerance and abs(cy - y) <= tolerance
 
 
 # ====== 鼠标移动 ======
@@ -212,7 +248,7 @@ def _move_bezier(x1: int, y1: int, x2: int, y2: int,
         if not _set_pos(bx, by):
             return
         time.sleep(random.uniform(duration / steps * 0.7, duration / steps * 1.5))
-    _set_pos(x2, y2)
+    _set_pos_precise(x2, y2)
 
 
 def move_to(x: int, y: int, variance: int = 5, human: bool = False) -> None:
@@ -222,7 +258,7 @@ def move_to(x: int, y: int, variance: int = 5, human: bool = False) -> None:
         cur = get_pos()
         _move_bezier(cur[0], cur[1], tx, ty, duration=random.uniform(0.08, 0.2))
     else:
-        _set_pos(tx, ty)
+        _set_pos_precise(tx, ty)
 
 
 def move_rel(dx: int, dy: int, human: bool = False) -> None:
@@ -239,7 +275,7 @@ def _move_away(x: int, y: int, radius: int = 50) -> None:
     """点击后随机移开鼠标（mhxy-escort 防悬停检测）。"""
     angle = random.uniform(0, 2 * math.pi)
     r = random.randint(radius // 2, radius)
-    _set_pos(x + int(math.cos(angle) * r), y + int(math.sin(angle) * r))
+    _set_pos_precise(x + int(math.cos(angle) * r), y + int(math.sin(angle) * r))
 
 
 # ====== 核心: 点击 ======
@@ -247,7 +283,8 @@ def _move_away(x: int, y: int, radius: int = 50) -> None:
 def click(x: int, y: int, button: str = "left", variance: int = 5,
           human: bool = False, move_away: bool = True,
           dead_zone: int = 0, verify: Optional[Callable] = None,
-          max_verify_retries: int = 2) -> bool:
+          max_verify_retries: int = 2,
+          bounds: Optional[tuple[int, int, int, int]] = None) -> bool:
     """点击屏幕坐标 (x, y) — 融合最优实践。
 
     流程:
@@ -255,18 +292,19 @@ def click(x: int, y: int, button: str = "left", variance: int = 5,
       → (可选) verify() 检查是否成功 → 失败则 retry
 
     参数:
-      dead_zone: 鼠标已在目标 N 像素内则跳过移动 (YOLOv11-CS)
+      dead_zone: 鼠标已在目标 N 像素内则跳过移动
       verify:    回调函数, 返回 bool, 用于检查点击是否生效 (hermes-agent)
       human:     启用贝塞尔曲线移动
+      bounds:    点击随机偏移后的屏幕坐标边界 (left, top, right, bottom)
     """
     attempts = max(1, max_verify_retries + 1 if verify is not None else 1)
 
     for attempt in range(attempts):
-        tx, ty = _jitter_point(x, y, variance)
+        tx, ty = _jitter_point(x, y, variance, bounds=bounds)
 
-        # Dead zone (YOLOv11-CS): 已在目标附近就不移动
+        # Dead zone: 已在目标附近就不移动
         cur = get_pos()
-        dist = math.sqrt((cur[0] - tx) ** 2 + (cur[1] - ty) ** 2)
+        dist = math.sqrt((cur[0] - x) ** 2 + (cur[1] - y) ** 2)
         skip_move = dead_zone > 0 and dist <= dead_zone
         should_move_away = move_away and not skip_move
 
@@ -275,7 +313,7 @@ def click(x: int, y: int, button: str = "left", variance: int = 5,
             if human:
                 _move_bezier(cur[0], cur[1], tx, ty, duration=random.uniform(0.08, 0.2))
             else:
-                if not _set_pos(tx, ty):
+                if not _set_pos_precise(tx, ty):
                     return False
 
         # 2. 等游戏响应
@@ -309,7 +347,7 @@ def click(x: int, y: int, button: str = "left", variance: int = 5,
 
 def double_click(x: int, y: int, variance: int = 5, move_away: bool = True) -> None:
     tx, ty = _jitter_point(x, y, variance)
-    if not _set_pos(tx, ty):
+    if not _set_pos_precise(tx, ty):
         return
     time.sleep(random.uniform(0.04, 0.06))
     if not _click_si(tx, ty, "left"):
@@ -328,7 +366,7 @@ def drag(start_x: int, start_y: int, end_x: int, end_y: int,
          duration: float = 0.3) -> None:
     tx1, ty1 = _jitter_point(start_x, start_y, 3)
     tx2, ty2 = _jitter_point(end_x, end_y, 3)
-    if not _set_pos(tx1, ty1):
+    if not _set_pos_precise(tx1, ty1):
         return
     time.sleep(0.05)
     if not _mouse_down_si("left"):

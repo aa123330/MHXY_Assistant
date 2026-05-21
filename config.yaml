@@ -31,6 +31,8 @@ battle:
   use_yolo_verify: true
 cloud_train:
   server_url: http://localhost:9527
+capture:
+  prefer_background: false
 game:
   auto_move_window: true
   hotkey_emergency: ctrl+shift+f2

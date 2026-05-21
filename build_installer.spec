@@ -179,8 +179,12 @@ datas += _tk_datas
 
 # Runtime YOLO assets only. Training images/labels are intentionally excluded so
 # the installer carries the runnable app rather than the dataset used to train it.
-for file_name in ("data.yaml", "menghuan_dataset.yaml", "yolov8n.pt", "yolov8s.pt"):
+for file_name in ("data.yaml", "menghuan_dataset.yaml"):
     datas += add_file_if_exists(Path("yolo_dataset") / file_name, "yolo_dataset")
+for model_file in (PROJECT_DIR / "yolo_dataset").glob("yolov8*.pt"):
+    datas += add_file_if_exists(model_file, "yolo_dataset")
+for model_file in (PROJECT_DIR / "yolo_dataset" / "models").glob("*.pt"):
+    datas += add_file_if_exists(model_file, str(Path("yolo_dataset") / "models"))
 for weights_dir in (PROJECT_DIR / "yolo_dataset" / "runs").glob("detect/*/weights"):
     if weights_dir.exists():
         datas.append(

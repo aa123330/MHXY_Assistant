@@ -155,6 +155,7 @@ def _default_config() -> dict:
     return {
         "game": {"window_title": "梦幻西游", "window_title_pattern": "梦幻西游 ONLINE.*",
                  "window_size": [800, 600], "auto_move_window": False},
+        "capture": {"prefer_background": False},
         "ai": {"enabled": False},
         "yolo": {"enabled": False},
         "scene_detection": {"enabled": False},
@@ -237,6 +238,10 @@ class Assistant:
         if not self.hwnd:
             return False
         try:
+            if hasattr(core, "is_window_valid") and not core.is_window_valid(self.hwnd):
+                return False
+            if hasattr(core, "is_window_minimized") and core.is_window_minimized(self.hwnd):
+                return False
             self.win_rect = core.get_window_rect(self.hwnd)
             self.client_rect = core.get_client_rect(self.hwnd)
             return True
@@ -268,10 +273,14 @@ class Assistant:
             if detector_mod is None:
                 return
             model_path = _resolve_project_path(yolo_cfg.get("model_path", ""))
+            expected_classes = yolo_cfg.get("classes") or {}
+            if isinstance(expected_classes, dict):
+                expected_classes = expected_classes.values()
             self.yolo = detector_mod.YOLODetector(
                 model_path=model_path,
                 conf_threshold=yolo_cfg.get("conf_threshold", 0.5),
                 device=yolo_cfg.get("device", "cuda"),
+                expected_class_names=expected_classes,
             )
         except Exception as e:
             print(f"[YOLO] 初始化失败: {e}")
@@ -350,26 +359,39 @@ class Assistant:
         rect = self._game_rect(core)
         if rect is None:
             return None
+
+        x1 = y1 = 0
+        x2 = rect[2] - rect[0]
+        y2 = rect[3] - rect[1]
         if region:
-            x1, y1, x2, y2 = map(int, region)
+            rx1, ry1, rx2, ry2 = map(int, region)
             width = rect[2] - rect[0]
             height = rect[3] - rect[1]
-            x1 = max(0, min(x1, width))
-            y1 = max(0, min(y1, height))
-            x2 = max(0, min(x2, width))
-            y2 = max(0, min(y2, height))
+            x1 = max(0, min(rx1, width))
+            y1 = max(0, min(ry1, height))
+            x2 = max(0, min(rx2, width))
+            y2 = max(0, min(ry2, height))
             if x2 <= x1 or y2 <= y1:
                 return None
+
+        capture_cfg = self.config.get("capture", {})
+        if capture_cfg.get("prefer_background", False) and hasattr(core, "capture_window_client_bg"):
+            bg = core.capture_window_client_bg(self.hwnd)
+            if bg is not None:
+                return bg[y1:y2, x1:x2].copy()
+
+        try:
             left = rect[0] + x1
             top = rect[1] + y1
             w = x2 - x1
             h = y2 - y1
             return core.capture_region(left, top, w, h)
-        return core.capture_region(
-            rect[0], rect[1],
-            rect[2] - rect[0],
-            rect[3] - rect[1],
-        )
+        except Exception:
+            if hasattr(core, "capture_window_client_bg"):
+                bg = core.capture_window_client_bg(self.hwnd)
+                if bg is not None:
+                    return bg[y1:y2, x1:x2].copy()
+            return None
 
     def _click_game(self, x: int, y: int, **kwargs) -> bool:
         core = _import_core()
@@ -398,6 +420,7 @@ class Assistant:
             print(f"[点击] 窗口校验失败: {e}")
             return False
 
+        kwargs.setdefault("bounds", (left, top, right - 1, bottom - 1))
         return bool(core.click(screen_x, screen_y, **kwargs))
 
     def _hotkey(self, *keys):

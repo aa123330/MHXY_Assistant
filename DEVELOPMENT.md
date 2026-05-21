@@ -1,5 +1,66 @@
 # 梦幻西游 AI 辅助 — 开发交接文档
 
+## 2026-05-21 更新记录
+
+### 本轮优化范围
+
+- 仍以 **YOLOv8** 作为项目内置训练和推理路线；不内置 YOLO11，不提升依赖去追 YOLO11。
+- `killbero/-YOLOv11-CS-` 只作为视觉辅助项目参考：借鉴鼠标 dead zone、闭环定位、DXGI/后台截图思路，不复用其 CS2 模型权重。
+- 主截图路线保持“前台可见窗口 + 客户区 MSS 截图”；后台截图作为可选 fallback，不作为默认路径。
+
+### 鼠标输入优化
+
+- `core/input.py`
+  - `click()` 新增 `bounds` 参数，随机偏移后的点击点会被限制在目标窗口客户区内，避免靠边按钮被 jitter 抖出窗口。
+  - 新增 `_set_pos_precise()`：SendInput 移动后读取当前鼠标坐标，若偏差超过容忍值会做 1-2 次轻量修正。
+  - `dead_zone` 改为按原始目标点计算，而不是按 jitter 后的随机点计算，减少不必要移动。
+  - 保留 SendInput 主线，不引入 PyAutoGUI/PyDirectInput 作为新依赖。
+
+### 窗口绑定和坐标优化
+
+- `core/window.py`
+  - 新增 `is_window_valid()`、`is_window_minimized()`、`get_foreground_window()`。
+  - 新增 `client_to_screen()`、`screen_to_client()`、`is_point_in_client()`，明确客户区坐标与屏幕坐标边界。
+  - `verify_click_window()` 现在会先确认窗口有效、未最小化，并确认点击点落在客户区内。
+- `main.py`
+  - `_refresh_window_rects()` 会在截图/点击前检查窗口句柄是否仍然有效，以及窗口是否最小化。
+  - `_click_game()` 会把客户区屏幕边界传给输入层，约束随机点击偏移。
+
+### 截图后端优化
+
+- `core/capture.py`
+  - 新增 `capture_window_client_bg(hwnd)`：优先 `PrintWindow(PW_CLIENTONLY | PW_RENDERFULLCONTENT)` 截客户区，失败后退回客户区偏移 BitBlt。
+  - `capture_region()` 对非法宽高直接报错，避免传入 0 或负数区域。
+- `config.yaml`
+  - 新增：
+    ```yaml
+    capture:
+      prefer_background: false
+    ```
+  - 默认仍使用 MSS 前台客户区截图；只有手动开启 `prefer_background` 时才优先尝试后台客户区截图。
+
+### YOLO 和打包优化
+
+- `core/detector.py`
+  - 模型加载后会输出实际类别列表，并和 `config.yaml` 里的期望类别做比对。
+  - 如果加载了外部模型但类别不匹配，会打印警告，避免“能加载但识别语义不对”的问题。
+- `yolo_dataset/train_yolo.py`
+  - 修复 UI 传入 `--device` 但训练脚本不接收的问题。
+  - 默认基础模型保持 `yolov8s.pt`。
+- `build_installer.spec` / `build_exe.spec`
+  - 打包时自动收集 `yolo_dataset/yolov8*.pt`。
+  - 支持把业务模型放在 `yolo_dataset/models/*.pt` 随包收集。
+  - 修复 `build_exe.spec` 中 `PACKAGE_ML` 未定义的问题。
+- `.gitignore`
+  - 忽略 `yolo_dataset/models/*.pt`，避免大模型误提交。
+
+### 本轮验证
+
+```bash
+python -m py_compile core\input.py core\window.py core\capture.py core\__init__.py core\detector.py main.py ui\panel.py yolo_dataset\train_yolo.py build_exe.spec build_installer.spec
+python yolo_dataset\train_yolo.py --help
+```
+
 ## 一、项目概述
 
 基于图像识别（截图 + OCR + 模板匹配 + 感知哈希 + YOLOv8）的梦幻西游 PC 版自动辅助工具。

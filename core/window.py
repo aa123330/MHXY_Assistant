@@ -60,6 +60,31 @@ def list_all_windows() -> list[tuple[int, str]]:
     return windows
 
 
+def is_window_valid(hwnd: int) -> bool:
+    """判断窗口句柄是否仍然有效且可见。"""
+    try:
+        return bool(hwnd and win32gui.IsWindow(hwnd) and win32gui.IsWindowVisible(hwnd))
+    except Exception:
+        return False
+
+
+def is_window_minimized(hwnd: int) -> bool:
+    """判断窗口是否最小化。"""
+    try:
+        return bool(win32gui.IsIconic(hwnd))
+    except Exception:
+        return True
+
+
+def get_foreground_window() -> Optional[int]:
+    """获取当前前台窗口句柄。"""
+    try:
+        hwnd = win32gui.GetForegroundWindow()
+        return hwnd or None
+    except Exception:
+        return None
+
+
 def get_window_rect(hwnd: int) -> tuple[int, int, int, int]:
     """获取窗口的屏幕坐标 (left, top, right, bottom)。"""
     return win32gui.GetWindowRect(hwnd)
@@ -78,6 +103,26 @@ def get_client_size(hwnd: int) -> tuple[int, int]:
     """获取客户区宽高。"""
     rect = win32gui.GetClientRect(hwnd)
     return rect[2] - rect[0], rect[3] - rect[1]
+
+
+def client_to_screen(hwnd: int, x: int, y: int) -> tuple[int, int]:
+    """客户区坐标转屏幕坐标。"""
+    return win32gui.ClientToScreen(hwnd, (int(x), int(y)))
+
+
+def screen_to_client(hwnd: int, x: int, y: int) -> tuple[int, int]:
+    """屏幕坐标转客户区坐标。"""
+    return win32gui.ScreenToClient(hwnd, (int(x), int(y)))
+
+
+def is_point_in_client(hwnd: int, x: int, y: int) -> bool:
+    """判断屏幕坐标是否落在窗口客户区内。"""
+    try:
+        cx, cy = screen_to_client(hwnd, x, y)
+        left, top, right, bottom = win32gui.GetClientRect(hwnd)
+        return left <= cx < right and top <= cy < bottom
+    except Exception:
+        return False
 
 
 def activate_window(hwnd: int) -> None:
@@ -151,6 +196,11 @@ def verify_click_window(x: int, y: int, expected_hwnd: int) -> bool:
 
     返回 True 表示坐标处的窗口就是（或属于）目标窗口。
     """
+    if not is_window_valid(expected_hwnd) or is_window_minimized(expected_hwnd):
+        return False
+    if not is_point_in_client(expected_hwnd, x, y):
+        return False
+
     hwnd_at_point = window_from_point(x, y)
     if hwnd_at_point == expected_hwnd:
         return True

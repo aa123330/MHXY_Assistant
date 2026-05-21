@@ -14,6 +14,7 @@ from pathlib import Path
 
 PROJECT_DIR = Path(os.getcwd())
 VENDOR_DIR = PROJECT_DIR / "vendor"
+PACKAGE_ML = os.environ.get("PACKAGE_ML", "1") != "0"
 if VENDOR_DIR.exists() and str(VENDOR_DIR) not in sys.path:
     sys.path.insert(0, str(VENDOR_DIR))
     for pth_file in VENDOR_DIR.glob("*.pth"):
@@ -94,8 +95,12 @@ if PACKAGE_ML:
 
 # 运行版只打包必要的训练配置/默认权重，不打包 images/labels 训练集。
 _yolo_runtime_data = []
-for file_name in ("data.yaml", "menghuan_dataset.yaml", "yolov8n.pt", "yolov8s.pt"):
+for file_name in ("data.yaml", "menghuan_dataset.yaml"):
     _yolo_runtime_data += add_file_if_exists(f"yolo_dataset/{file_name}", "yolo_dataset")
+for model_file in (PROJECT_DIR / "yolo_dataset").glob("yolov8*.pt"):
+    _yolo_runtime_data += add_file_if_exists(model_file, "yolo_dataset")
+for model_file in (PROJECT_DIR / "yolo_dataset" / "models").glob("*.pt"):
+    _yolo_runtime_data += add_file_if_exists(model_file, str(Path("yolo_dataset") / "models"))
 for weights_dir in (PROJECT_DIR / "yolo_dataset" / "runs").glob("detect/*/weights"):
     if weights_dir.exists():
         _yolo_runtime_data.append((str(weights_dir), str(Path("yolo_dataset") / "runs" / "detect" / weights_dir.parent.name / "weights")))

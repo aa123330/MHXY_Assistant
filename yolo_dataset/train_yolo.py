@@ -35,19 +35,19 @@ else:
     DATA_DIR = Path(__file__).parent
 
 
-def train(base_model: str, epochs: int, batch: int, imgsz: int, name: str):
+def train(base_model: str, epochs: int, batch: int, imgsz: int, name: str, device: str):
     """训练 YOLO 模型。"""
     data_yaml = str(DATA_DIR / "data.yaml")
 
     print(f"数据集: {data_yaml}")
     print(f"基础模型: {base_model}")
-    print(f"训练轮数: {epochs}, batch: {batch}, 图像尺寸: {imgsz}")
+    print(f"训练轮数: {epochs}, batch: {batch}, 图像尺寸: {imgsz}, 设备: {device}")
 
     model = YOLO(base_model)
 
     model.train(
         data=data_yaml,
-        device=0,                # GPU 0（CPU 则设为 'cpu'）
+        device=device,
         epochs=epochs,
         batch=batch,
         imgsz=imgsz,
@@ -93,6 +93,7 @@ def main():
     parser.add_argument("--epochs", type=int, default=100, help="训练轮数")
     parser.add_argument("--batch", type=int, default=8, help="批大小")
     parser.add_argument("--imgsz", type=int, default=640, help="图像尺寸")
+    parser.add_argument("--device", default="cuda", help="训练设备 (cuda / cpu / 0)")
     parser.add_argument("--name", default="mhxy_train", help="训练任务名称")
     parser.add_argument("--val", action="store_true", help="仅验证不训练")
     parser.add_argument("--predict", help="对指定目录做推理")
@@ -103,7 +104,7 @@ def main():
     elif args.predict:
         predict(args.base, args.predict)
     else:
-        train(args.base, args.epochs, args.batch, args.imgsz, args.name)
+        train(args.base, args.epochs, args.batch, args.imgsz, args.name, args.device)
 
 
 if __name__ == "__main__":

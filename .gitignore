@@ -30,6 +30,7 @@ config.local.yaml
 yolo_dataset/images/
 yolo_dataset/labels/
 yolo_dataset/runs/
+yolo_dataset/models/*.pt
 
 # OS/editor noise
 .DS_Store

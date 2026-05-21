@@ -5,6 +5,8 @@ try:
     from .window import (
         find_window, find_window_regex, list_all_windows,
         get_window_rect, get_client_rect, get_client_size,
+        is_window_valid, is_window_minimized, get_foreground_window,
+        client_to_screen, screen_to_client, is_point_in_client,
         activate_window, move_window, set_window_size, get_window_info,
         set_topmost, send_to_bottom, window_from_point,
         verify_click_window, enum_child_windows, get_window_process_name,
@@ -14,7 +16,10 @@ except ImportError:
 
 # capture — 需要 mss + pywin32
 try:
-    from .capture import capture_screen, capture_window, capture_region, capture_window_bg
+    from .capture import (
+        capture_screen, capture_window, capture_region,
+        capture_window_bg, capture_window_client_bg,
+    )
 except ImportError:
     pass
 
