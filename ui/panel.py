@@ -211,6 +211,7 @@ class ControlPanel:
             ("采集场景模板", self._capture_scene_template),
             ("采集哈希模板", self._capture_hash),
             ("重新定位窗口", self._relocate_window),
+            ("导出诊断包", self._export_diagnostics),
             ("打开截图目录", lambda: os.startfile(str(USER_DIR / "debug"))),
         ]
         for text, cmd in buttons:
@@ -417,6 +418,18 @@ class ControlPanel:
             messagebox.showinfo("截图完成", f"已保存到 {path}")
         else:
             self.log("截图失败：无法获取游戏画面", "error")
+
+    def _export_diagnostics(self):
+        """导出诊断包，便于排查窗口、截图、坐标和配置问题。"""
+        try:
+            from core.diagnostics import export_diagnostics
+
+            path = export_diagnostics(self.assistant)
+            self.log(f"诊断包已导出: {path}", "task")
+            messagebox.showinfo("导出完成", f"诊断包已保存:\n{path}")
+        except Exception as e:
+            self.log(f"导出诊断包失败: {e}", "error")
+            messagebox.showerror("导出失败", str(e))
 
     def _capture_hash(self):
         """截取全屏并注册为感知哈希模板。"""

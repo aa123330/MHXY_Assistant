@@ -3,7 +3,11 @@ chcp 65001 >nul 2>&1
 title Setup Dependencies
 cd /d "%~dp0"
 
-echo Installing dependencies for Python 3.12...
+set "INSTALL_ML=0"
+if /I "%~1"=="full" set "INSTALL_ML=1"
+if /I "%~1"=="ml" set "INSTALL_ML=1"
+
+echo Installing runtime dependencies for Python 3.12...
 echo.
 
 set "PYTHON_CMD=py -3.12"
@@ -12,15 +16,17 @@ if %errorlevel% neq 0 (
     set "PYTHON_CMD=python"
 )
 
-%PYTHON_CMD% -m pip install --target vendor opencv-python "numpy>=1.26,<2.0" Pillow mss pynput pywin32 PyYAML pyautogui
+%PYTHON_CMD% -m pip install --target vendor -r requirements.txt
 
-echo.
-echo Installing OCR dependencies...
-%PYTHON_CMD% -m pip install "paddlepaddle==2.6.2" "paddleocr==2.9.1"
-echo.
-echo Installing YOLO dependencies...
-%PYTHON_CMD% -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
-%PYTHON_CMD% -m pip install ultralytics
+if "%INSTALL_ML%"=="1" (
+    echo.
+    echo Installing OCR/YOLO dependencies...
+    %PYTHON_CMD% -m pip install -r requirements-ml.txt
+) else (
+    echo.
+    echo Skipping OCR/YOLO dependencies for the lite runtime.
+    echo Run setup_deps.bat full to install PaddleOCR, Torch and Ultralytics.
+)
 
 echo.
 echo Done.

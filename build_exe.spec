@@ -14,7 +14,7 @@ from pathlib import Path
 
 PROJECT_DIR = Path(os.getcwd())
 VENDOR_DIR = PROJECT_DIR / "vendor"
-PACKAGE_ML = os.environ.get("PACKAGE_ML", "1") != "0"
+PACKAGE_ML = os.environ.get("PACKAGE_ML", "0") != "0"
 if VENDOR_DIR.exists() and str(VENDOR_DIR) not in sys.path:
     sys.path.insert(0, str(VENDOR_DIR))
     for pth_file in VENDOR_DIR.glob("*.pth"):
@@ -49,7 +49,6 @@ DATA_PACKAGES = [
     "yaml",
     "PIL",
     "numpy",
-    "pyautogui",
 ]
 
 BINARY_PACKAGES = [
@@ -88,22 +87,52 @@ _hidden = collect_many(collect_submodules, HIDDEN_PACKAGES)
 _data = collect_many(collect_data_files, DATA_PACKAGES)
 _binaries = collect_many(collect_dynamic_libs, BINARY_PACKAGES)
 
+excludes = [
+    'matplotlib',
+    'jupyter',
+    'notebook',
+    'numpy.tests',
+    'numpy.core.tests',
+    'numpy.f2py.tests',
+    'numpy.lib.tests',
+    'numpy.linalg.tests',
+    'numpy.random.tests',
+    'numpy.typing.tests',
+    'PIL.ImageQt',
+    'pandas.tests',
+    'scipy',
+]
+
+if not PACKAGE_ML:
+    excludes += [
+        'Cython',
+        'paddle',
+        'paddleocr',
+        'torch',
+        'torchvision',
+        'torchaudio',
+        'ultralytics',
+        'yolo_dataset.auto_label',
+        'yolo_dataset.train_yolo',
+    ]
+
 # Paddle imports Cython utilities at runtime through cpp_extension. PyInstaller
 # may miss these .cpp resources, causing FileNotFoundError for CppSupport.cpp.
 if PACKAGE_ML:
     _data += add_tree_if_exists("vendor/Cython/Utility", "Cython/Utility")
 
-# 运行版只打包必要的训练配置/默认权重，不打包 images/labels 训练集。
 _yolo_runtime_data = []
-for file_name in ("data.yaml", "menghuan_dataset.yaml"):
-    _yolo_runtime_data += add_file_if_exists(f"yolo_dataset/{file_name}", "yolo_dataset")
-for model_file in (PROJECT_DIR / "yolo_dataset").glob("yolov8*.pt"):
-    _yolo_runtime_data += add_file_if_exists(model_file, "yolo_dataset")
-for model_file in (PROJECT_DIR / "yolo_dataset" / "models").glob("*.pt"):
-    _yolo_runtime_data += add_file_if_exists(model_file, str(Path("yolo_dataset") / "models"))
-for weights_dir in (PROJECT_DIR / "yolo_dataset" / "runs").glob("detect/*/weights"):
-    if weights_dir.exists():
-        _yolo_runtime_data.append((str(weights_dir), str(Path("yolo_dataset") / "runs" / "detect" / weights_dir.parent.name / "weights")))
+if PACKAGE_ML:
+    # 运行版只打包必要的训练配置/默认权重，不打包 images/labels 训练集。
+    for file_name in ("data.yaml", "menghuan_dataset.yaml"):
+        _yolo_runtime_data += add_file_if_exists(f"yolo_dataset/{file_name}", "yolo_dataset")
+    for model_file in (PROJECT_DIR / "yolo_dataset").glob("yolo*.pt"):
+        _yolo_runtime_data += add_file_if_exists(model_file, "yolo_dataset")
+    for model_file in (PROJECT_DIR / "yolo_dataset" / "models").glob("*.pt"):
+        _yolo_runtime_data += add_file_if_exists(model_file, str(Path("yolo_dataset") / "models"))
+    for weights_dir in (PROJECT_DIR / "yolo_dataset" / "runs").glob("detect/*/weights"):
+        if weights_dir.exists():
+            _yolo_runtime_data.append((str(weights_dir), str(Path("yolo_dataset") / "runs" / "detect" / weights_dir.parent.name / "weights")))
 
 vendor_path = str(VENDOR_DIR)
 
@@ -157,26 +186,11 @@ a = Analysis(
         'urllib',
         'subprocess',
         'logging',
-        'pyautogui',
     ] + _hidden,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[
-        'matplotlib',
-        'jupyter',
-        'notebook',
-        'numpy.tests',
-        'numpy.core.tests',
-        'numpy.f2py.tests',
-        'numpy.lib.tests',
-        'numpy.linalg.tests',
-        'numpy.random.tests',
-        'numpy.typing.tests',
-        'PIL.ImageQt',
-        'pandas.tests',
-        'scipy',
-    ],
+    excludes=excludes,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=None,

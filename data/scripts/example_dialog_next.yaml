@@ -1,0 +1,13 @@
+steps:
+  - action: log
+    message: "等待对话下一步按钮"
+  - action: until_template
+    template: speak-task.png
+    category: ui
+    region: [300, 450, 520, 560]
+    timeout: 3
+    interval: 0.3
+    click: true
+    variance: 3
+  - action: wait
+    seconds: 0.5

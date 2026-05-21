@@ -39,11 +39,14 @@ try:
 except ImportError:
     pass
 
-# detector — 需要 ultralytics/torch。只导出类定义，不在启动时加载模型。
+# action_script — 轻量 YAML 动作脚本执行器
 try:
-    from .detector import YOLODetector, YOLODetectionWindow
+    from .action_script import ActionScriptRunner, run_action_script
 except ImportError:
     pass
+
+# detector 依赖 ultralytics/torch，体积很大。
+# 不在 core 包初始化时导入；需要 YOLO 时直接 import core.detector 懒加载。
 
 # OCR 依赖 paddle/paddleocr，体积大且导入链会触发 Cython/setuptools。
 # 不在 core 包初始化时导入；需要 OCR 时直接 import core.ocr 懒加载。

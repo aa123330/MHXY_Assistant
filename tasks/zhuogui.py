@@ -10,8 +10,8 @@
 """
 
 import time
-import pyautogui
 from .base import BaseTask, Step
+from core.input import hotkey
 
 
 class ZhuoguiTask(BaseTask):
@@ -62,7 +62,7 @@ class ZhuoguiTask(BaseTask):
 
     def _use_tianyan(self) -> bool:
         print("[捉鬼] 使用天眼通符...")
-        pyautogui.hotkey("alt", "t")
+        hotkey("alt", "t")
         time.sleep(1)
         return True
 

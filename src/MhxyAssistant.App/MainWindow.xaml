@@ -1,0 +1,54 @@
+<Window x:Class="MhxyAssistant.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="梦幻视觉辅助" Height="720" Width="980"
+        WindowStartupLocation="CenterScreen">
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+            <Button Content="重新定位窗口" Width="110" Margin="0,0,8,0" Command="{Binding BindWindowCommand}" />
+            <Button Content="停止任务" Width="90" Margin="0,0,8,0" Command="{Binding StopTaskCommand}" />
+            <TextBlock VerticalAlignment="Center" Text="{Binding StatusText}" />
+        </StackPanel>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <GroupBox Header="任务" Grid.Column="0" Margin="0,0,12,0">
+                <ItemsControl ItemsSource="{Binding Tasks}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding Name}" Margin="6" Padding="8"
+                                    Command="{Binding DataContext.RunTaskCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding Id}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </GroupBox>
+
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,12">
+                    <Button Content="截图" Margin="4" Command="{Binding CaptureCommand}" />
+                    <Button Content="YOLO 预览" Margin="4" Command="{Binding YoloPreviewCommand}" />
+                    <Button Content="AI 设置" Margin="4" Command="{Binding AiSettingsCommand}" />
+                    <Button Content="导出诊断包" Margin="4" Command="{Binding ExportDiagnosticsCommand}" />
+                </UniformGrid>
+
+                <TextBox Grid.Row="1"
+                         Text="{Binding LogText}"
+                         FontFamily="Consolas"
+                         FontSize="13"
+                         IsReadOnly="True"
+                         TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto" />
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>

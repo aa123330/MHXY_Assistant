@@ -2,6 +2,42 @@
 
 ## 2026-05-21 更新记录
 
+### 直接更换框架决策
+
+- 用户已确认：允许不保留 Python 能力层，但必须保留原项目全部功能。
+- 主框架选型：**C#/.NET 8 WPF + OpenCvSharp + ONNX Runtime + Win32 P/Invoke**。
+- 不选择 MaaFramework 纯资源项目作为主框架：
+  - Maa 的 pipeline 思路适合借鉴，但无法完整承接当前 AI 助手、YOLO 训练、云端、诊断、复杂战斗状态机。
+- 不选择 Tauri/Rust 作为第一阶段：
+  - 包体可控，但 Windows 截图/输入/OCR/ONNX 维护成本高。
+- 已新增 `src/` 新框架骨架：
+  - `MhxyAssistant.Core`：窗口、输入、截图、视觉、任务接口。
+  - `MhxyAssistant.App`：WPF 主窗口和任务入口。
+- 已安装 .NET SDK 8.0.421；当前 shell 的 PATH 未刷新，使用 `C:\Program Files\dotnet\dotnet.exe` 可编译。
+- 新框架已通过 `dotnet build src\MhxyAssistant.App\MhxyAssistant.App.csproj -c Release --no-restore`，0 警告 0 错误。
+- 详细迁移方案见 `docs/framework-migration.md`。
+
+### 追加参考项目优化
+
+- 参考项目：
+  - `huiyadanli/bettergi-docs`
+  - `IrisRainbowNeko/genshin_autoplay_domain`
+  - `infstellar/genshin_impact_assistant`
+  - `1bananachicken/MaaNTE`
+  - `daoqi/MintNTE`
+  - `BnanZ0/ok-nte`
+- 采纳方向：
+  - 借鉴 BetterGI / Maa 系列的问题排查方式，新增诊断包导出。
+  - 借鉴 `genshin_autoplay_domain` 的 YAML 动作脚本思想，新增轻量 `ActionScriptRunner`，但不引入 YOLOX/mmtracking/MAAFramework 等重依赖。
+  - 借鉴这类项目对分辨率强约束的经验，窗口绑定后会提示客户区尺寸与 `config.yaml.game.window_size` 不一致的风险。
+- 新增文件：
+  - `core/diagnostics.py`：导出 `debug/diagnostics/diagnostics_*.zip`，包含脱敏配置、窗口信息、环境信息、MSS 截图样本、后台截图样本和黑屏比例。
+  - `core/action_script.py`：支持 `click`、`hotkey/key`、`wait`、`until_template`、`ocr_contains`、`log` 等基础动作。
+- UI 更新：
+  - 调试工具栏新增“导出诊断包”按钮。
+- 任务层更新：
+  - `BaseTask.run_action_script(script_path)` 可直接执行 YAML 动作脚本，后续可把师门/抓鬼/押镖里的重复点击等待流程逐步迁移到 `data/scripts/*.yaml`。
+
 ### 本轮优化范围
 
 - 仍以 **YOLOv8** 作为项目内置训练和推理路线；不内置 YOLO11，不提升依赖去追 YOLO11。
@@ -54,6 +90,35 @@
 - `.gitignore`
   - 忽略 `yolo_dataset/models/*.pt`，避免大模型误提交。
 
+### 2026-05-21 打包瘦身重构
+
+- 参考项目：
+  - `babalae/better-genshin-impact`
+  - `1bananachicken/MaaNTE`
+  - `daoqi/MintNTE`
+- 结论：
+  - 这些项目发布包较小，关键不是单纯压缩，而是把运行时、资源、模型、训练工具链拆开。
+  - 本项目之前默认把 PaddleOCR/PaddlePaddle/Torch/Ultralytics/训练权重一起打进安装包，是 2GB+ 的主要原因。
+- 已落地：
+  - 默认依赖改为 Lite 运行时：截图、窗口、输入、模板、颜色、脚本、诊断。
+  - 新增 `requirements-ml.txt`，OCR/YOLO/训练相关依赖改为可选。
+  - `setup_deps.bat` 默认只安装基础依赖；`setup_deps.bat full` 才安装 PaddleOCR、Torch、Ultralytics。
+  - `build_installer.bat` / `build_exe.bat` 默认构建 Lite 包；传入 `full` 或 `ml` 才构建完整 ML 包。
+  - `build_installer.spec` / `build_exe.spec` 的 `PACKAGE_ML` 默认关闭。
+  - Lite 包不再收集 `yolo_dataset/*.pt`、`runs/detect/*/weights`、Paddle/Torch/Cython 大型文件。
+  - `core/__init__.py` 不再导入 `core.detector`，避免启动和 Lite 打包时误拉起 ultralytics/torch 导入链。
+  - `tasks/zhuogui.py` 改用 `core.input.hotkey()`，移除默认 `pyautogui` 依赖。
+  - Lite 打包时强制排除 `torch/torchvision/paddle/paddleocr/ultralytics/Cython`，避免 PyInstaller 从 UI/训练代码的可选导入误收集 ML 栈。
+- 推荐发布策略：
+  - 默认发 `MHXY_Assistant_Lite` 安装包。
+  - 需要 YOLO/OCR/训练时，再发 `MHXY_Assistant_Full` 或后续做成 ML 扩展包。
+  - 中长期参考 BetterGI 的资产包方案，为模板、脚本、模型增加 manifest 和版本号。
+  - 中长期参考 MaaNTE/MintNTE，把稳定点击流程资源化，Python 只保留复杂识别和决策 Provider。
+- 本轮 Lite 打包验证：
+  - `dist/MHXY_Assistant`：约 255 MB。
+  - `dist/installer/梦幻视觉辅助_Setup.exe`：约 57 MB。
+  - 包内已无 `torch`、`paddle`、`ultralytics`、`Cython` 目录。
+
 ### 本轮验证
 
 ```bash
@@ -92,15 +157,11 @@ cd mhxy_assistant
 ### 2.3 安装依赖
 
 ```bash
-# 基础依赖（vendor 目录，开发+打包通用）
-py -3.12 -m pip install --target vendor opencv-python "numpy>=1.26,<2.0" Pillow mss pynput pywin32 PyYAML pyautogui
+# 基础依赖（Lite 运行时，vendor 目录，开发+打包通用）
+setup_deps.bat
 
-# YOLO + GPU 训练
-py -3.12 -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
-py -3.12 -m pip install ultralytics
-
-# OCR（注意：PaddleOCR 3.x 有 oneDNN bug，用 2.x）
-py -3.12 -m pip install "paddlepaddle==2.6.2" "paddleocr==2.9.1"
+# 可选：完整 ML 环境（OCR/YOLO/训练）
+setup_deps.bat full
 
 # 打包
 py -3.12 -m pip install pyinstaller
@@ -319,19 +380,27 @@ py -3.12 -c "import sys; sys.path.insert(0,'vendor'); sys.path.insert(0,'.'); ..
 # 确认 pyinstaller 安装在系统 Python 3.12
 py -3.12 -m pip install pyinstaller pywin32
 
-# 打包（spec 会自动收集 torch/paddle/ultralytics 所有子模块）
-py -3.12 -m PyInstaller build_exe.spec --noconfirm
+# 默认 Lite 安装包：不包含 Paddle/Torch/Ultralytics/YOLO 权重
+build_installer.bat
 
-# 输出: dist/MHXY_Assistant.exe
+# 完整 ML 安装包：包含 Paddle/Torch/Ultralytics 和运行权重
+build_installer.bat full
+
+# 单文件 Lite 调试包
+build_exe.bat
+
+# 单文件 Full 调试包，不推荐作为主发布形态
+build_exe.bat full
 ```
 
-`build_exe.spec` 使用 `collect_submodules` 自动收集大型包的数百个子模块和 DLL 文件。
+主发布建议使用 `build_installer.spec` 的 onedir 安装包。Paddle/Torch 这类 native 依赖在 onefile 下容易变成超大 `_MEI` 解包目录，也更容易漏 Cython/Paddle 运行文件。
 
 ## 七、已知坑点速查
 
 | 症状 | 原因 | 解决 |
 |------|------|------|
-| `OSError 127 shm.dll` | paddle 先于 torch 导入，DLL 冲突 | `core/__init__.py` 确保 detector 在 ocr 之前 |
+| Lite 包找不到 YOLO/OCR | 默认包不再包含 ML 依赖 | 用 `setup_deps.bat full` + `build_installer.bat full` |
+| `OSError 127 shm.dll` | paddle/torch DLL 冲突 | Full 包中保持 YOLO/OCR 懒加载，避免启动时同时加载 |
 | `numpy.sctypes removed` | numpy 2.x 不兼容 PaddleOCR 2.x | vendor numpy 锁定 1.26.4 |
 | `gbk codec can't decode` | Windows GBK 编码 ≠ Ultralytics Unicode 输出 | subprocess 显式 `encoding="utf-8", errors="replace"` |
 | 训练进度条不动 | Ultralytics TQDM 用 `\r` 不分 `\n` | 二进制读管道手动切分 `\r`/`\n` |
@@ -362,3 +431,48 @@ py -3.12 -m PyInstaller build_exe.spec --noconfirm
 | mojoin/ScreenChangeShockDevice | mss高速截图、numpy像素diff、SendInput绝对坐标 |
 | DexYang/GDXY2 | 资源文件格式 |
 | lvjincheng1998/JCXY | MMORPG架构参考 |
+ 
+## 九、.NET 8 WPF 框架迁移进度
+
+已按“直接更换框架、不保留 Python 能力层”的方向创建新工程：
+
+- `src/MhxyAssistant.Core`：核心服务、窗口绑定、截图、输入、视觉检测、任务状态机
+- `src/MhxyAssistant.App`：WPF 主程序壳、任务按钮、截图、诊断包入口
+- `docs/framework-migration.md`：框架迁移路线图
+
+当前技术栈：WPF、Win32 P/Invoke、OpenCvSharp、ONNX Runtime、Inno Setup。
+
+本轮已迁移/补强：
+
+- `TaskStep` 改为异步 Step runner，支持 `Next`、`Repeat`、`RestartFromFirst`、`CompleteTask`、`FailTask`
+- Step 支持超时、重试、backoff、取消令牌，后续任务按 `Plot -> Escort -> Shimen` 迁移
+- `ColorDetector` 迁移红字、对话框、战斗 UI、HSV 颜色比例检测
+- 新增 `ImageHasher` 感知哈希
+- 新增 `ScreenChangeDetector` 画面变化检测
+- `TemplateMatcher.MatchAll` 改为真实多目标匹配，并做重叠抑制
+- 诊断包导出修复 nullable struct 编译问题
+
+验证命令：
+
+```powershell
+$env:DOTNET_CLI_HOME='F:\codex\mhxy_assistant\.dotnet_home'
+$env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1'
+$env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
+$env:APPDATA='F:\codex\mhxy_assistant\.appdata'
+$env:NUGET_PACKAGES='F:\codex\mhxy_assistant\.nuget\packages'
+& 'C:\Program Files\dotnet\dotnet.exe' restore src\MhxyAssistant.App\MhxyAssistant.App.csproj -r win-x64
+& 'C:\Program Files\dotnet\dotnet.exe' build src\MhxyAssistant.App\MhxyAssistant.App.csproj -c Release --no-restore
+& 'C:\Program Files\dotnet\dotnet.exe' publish src\MhxyAssistant.App\MhxyAssistant.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false -o dist\MHXY_Assistant_Net
+ISCC installer\mhxy_assistant.iss
+```
+
+当前验证结果：
+
+- Release build：0 warning / 0 error
+- 干净 .NET 发布目录：`dist/MHXY_Assistant_Net`，约 268 MB
+- Inno 安装包：`dist/installer/梦幻视觉辅助_Setup.exe`，约 77.5 MB
+- 安装器支持选择安装路径、开始菜单/桌面快捷方式、卸载入口
+- 快捷方式名称：`梦幻视觉辅助`
+- 图标：`assets/mhxy_icon.ico`
+
+注意：旧的 `dist/MHXY_Assistant` 可能残留 PyInstaller 产物，不能再作为新安装包输入目录。新安装包输入目录固定为 `dist/MHXY_Assistant_Net`，`build_dotnet_installer.bat` 会清理并重新发布该目录。

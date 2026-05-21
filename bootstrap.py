@@ -106,7 +106,6 @@ def vendor_status() -> dict:
         "ultralytics": "ultralytics",
         "paddleocr": "paddleocr",
         "torch": "torch",
-        "pyautogui": "pyautogui",
     }
     status = {}
     for name, module in packages.items():

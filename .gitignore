@@ -15,12 +15,20 @@ vendor/
 # Build and packaged artifacts
 build/
 dist/
+src/**/bin/
+src/**/obj/
 *.spec.bak
+
+# Local .NET/NuGet caches used by sandboxed builds
+.appdata/
+.dotnet_home/
+.nuget/
 
 # Runtime/debug output
 debug/
 logs/
 *.log
+debug/diagnostics/
 
 # Local-only config
 config.local.yaml

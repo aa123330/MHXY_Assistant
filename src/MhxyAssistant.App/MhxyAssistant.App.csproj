@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <ApplicationIcon>..\..\assets\mhxy_icon.ico</ApplicationIcon>
+    <AssemblyName>MHXY_Assistant</AssemblyName>
+    <RootNamespace>MhxyAssistant.App</RootNamespace>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PlatformTarget>x64</PlatformTarget>
+    <SatelliteResourceLanguages>zh-Hans;en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MhxyAssistant.Core\MhxyAssistant.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\assets\mhxy_icon.ico" Link="assets\mhxy_icon.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\config.yaml" Link="config.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\**\*" LinkBase="data" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -232,7 +232,23 @@ class Assistant:
             core.move_window(self.hwnd, 0, 0)
             self.win_rect = core.get_window_rect(self.hwnd)
             self.client_rect = core.get_client_rect(self.hwnd)
+        self._warn_unexpected_client_size()
         return True
+
+    def _warn_unexpected_client_size(self):
+        """提示窗口客户区尺寸异常，视觉模板/坐标依赖客户区像素。"""
+        expected = self.config.get("game", {}).get("window_size") or []
+        if not self.client_rect or len(expected) != 2:
+            return
+        actual_w = self.client_rect[2] - self.client_rect[0]
+        actual_h = self.client_rect[3] - self.client_rect[1]
+        exp_w, exp_h = int(expected[0]), int(expected[1])
+        if abs(actual_w - exp_w) > 2 or abs(actual_h - exp_h) > 2:
+            print(
+                "[窗口] 客户区尺寸与配置不一致: "
+                f"actual={actual_w}x{actual_h}, expected={exp_w}x{exp_h}。"
+                "视觉模板和点击坐标可能偏移。"
+            )
 
     def _refresh_window_rects(self, core) -> bool:
         if not self.hwnd:
@@ -456,10 +472,23 @@ class Assistant:
     # ---------- 任务控制 ----------
 
     def run_task(self, task_name: str) -> None:
+        if self.running:
+            print("[任务] 已有任务正在运行")
+            return
+        task = self._create_task(task_name)
+        if task is None:
+            return
+
+        self.current_task = task
+        self.running = True
+        self._thread = threading.Thread(target=self._task_loop, daemon=True)
+        self._thread.start()
+
+    def _create_task(self, task_name: str):
         tasks_mod = _import_tasks()
         if tasks_mod is None:
             print("tasks 模块导入失败")
-            return
+            return None
 
         # 优先从注册表查找，回退到硬编码映射
         from tasks.base import get_task
@@ -475,12 +504,21 @@ class Assistant:
             task_cls = task_map.get(task_name)
             if not task_cls:
                 print(f"未知任务: {task_name}")
-                return
+                return None
             task = task_cls(self.game_context)
+        return task
 
-        self.current_task = task
+    def run_task_queue(self, task_names: list[str]) -> None:
+        """按顺序执行任务队列；任一任务失败则停止队列。"""
+        if self.running:
+            print("[任务队列] 已有任务正在运行")
+            return
+        names = [name for name in task_names if name]
+        if not names:
+            print("[任务队列] 队列为空")
+            return
         self.running = True
-        self._thread = threading.Thread(target=self._task_loop, daemon=True)
+        self._thread = threading.Thread(target=self._task_queue_loop, args=(names,), daemon=True)
         self._thread.start()
 
     def stop(self) -> None:
@@ -490,12 +528,52 @@ class Assistant:
 
     def _task_loop(self) -> None:
         task = self.current_task
+        try:
+            self._run_task_instance(task)
+        except Exception as e:
+            self._export_failure_diagnostics(f"task_{getattr(task, 'name', 'unknown')}", e)
+            raise
+        finally:
+            self.running = False
+
+    def _task_queue_loop(self, task_names: list[str]) -> None:
+        try:
+            for name in task_names:
+                if not self.running:
+                    break
+                task = self._create_task(name)
+                if task is None:
+                    break
+                self.current_task = task
+                state = self._run_task_instance(task)
+                if state.value != "completed":
+                    print(f"[任务队列] 任务 {name} 未完成，状态: {state.value}")
+                    break
+            print("[任务队列] 已结束")
+        except Exception as e:
+            self._export_failure_diagnostics("task_queue", e)
+            raise
+        finally:
+            self.running = False
+
+    def _run_task_instance(self, task):
         task.start()
+        state = task.state
         while self.running:
             state = task.tick()
             if state.value in ("completed", "error", "cancelled"):
                 break
             time.sleep(0.1)
+        return state
+
+    def _export_failure_diagnostics(self, name: str, exc: Exception) -> None:
+        try:
+            from core.diagnostics import export_diagnostics
+
+            path = export_diagnostics(self)
+            print(f"[诊断] {name} 异常: {exc}; 诊断包: {path}")
+        except Exception as diag_exc:
+            print(f"[诊断] 导出失败: {diag_exc}")
 
     # ---------- 调试 ----------
 

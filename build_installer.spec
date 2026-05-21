@@ -15,7 +15,7 @@ from pathlib import Path
 
 PROJECT_DIR = Path(os.getcwd()).resolve()
 VENDOR_DIR = PROJECT_DIR / "vendor"
-PACKAGE_ML = os.environ.get("PACKAGE_ML", "1") != "0"
+PACKAGE_ML = os.environ.get("PACKAGE_ML", "0") != "0"
 
 if VENDOR_DIR.exists() and str(VENDOR_DIR) not in sys.path:
     sys.path.insert(0, str(VENDOR_DIR))
@@ -90,8 +90,6 @@ hidden_packages = [
     "cv2",
     "mss",
     "pynput",
-    "pyautogui",
-    "win32com",
 ]
 
 data_packages = [
@@ -101,7 +99,6 @@ data_packages = [
     "yaml",
     "PIL",
     "numpy",
-    "pyautogui",
 ]
 
 binary_packages = [
@@ -154,7 +151,6 @@ hiddenimports = [
     "pynput._util",
     "pynput.keyboard",
     "pynput.mouse",
-    "pyautogui",
     "pythoncom",
     "pywintypes",
     "tkinter",
@@ -177,22 +173,24 @@ datas += add_tree_if_exists("tcl", "tcl")
 _tk_datas, _tk_binaries = add_tk_runtime()
 datas += _tk_datas
 
-# Runtime YOLO assets only. Training images/labels are intentionally excluded so
-# the installer carries the runnable app rather than the dataset used to train it.
-for file_name in ("data.yaml", "menghuan_dataset.yaml"):
-    datas += add_file_if_exists(Path("yolo_dataset") / file_name, "yolo_dataset")
-for model_file in (PROJECT_DIR / "yolo_dataset").glob("yolov8*.pt"):
-    datas += add_file_if_exists(model_file, "yolo_dataset")
-for model_file in (PROJECT_DIR / "yolo_dataset" / "models").glob("*.pt"):
-    datas += add_file_if_exists(model_file, str(Path("yolo_dataset") / "models"))
-for weights_dir in (PROJECT_DIR / "yolo_dataset" / "runs").glob("detect/*/weights"):
-    if weights_dir.exists():
-        datas.append(
-            (
-                str(weights_dir),
-                str(Path("yolo_dataset") / "runs" / "detect" / weights_dir.parent.name / "weights"),
+if PACKAGE_ML:
+    # Runtime YOLO assets only. Training images/labels are intentionally
+    # excluded so the installer carries the runnable app rather than the
+    # dataset used to train it.
+    for file_name in ("data.yaml", "menghuan_dataset.yaml"):
+        datas += add_file_if_exists(Path("yolo_dataset") / file_name, "yolo_dataset")
+    for model_file in (PROJECT_DIR / "yolo_dataset").glob("yolo*.pt"):
+        datas += add_file_if_exists(model_file, "yolo_dataset")
+    for model_file in (PROJECT_DIR / "yolo_dataset" / "models").glob("*.pt"):
+        datas += add_file_if_exists(model_file, str(Path("yolo_dataset") / "models"))
+    for weights_dir in (PROJECT_DIR / "yolo_dataset" / "runs").glob("detect/*/weights"):
+        if weights_dir.exists():
+            datas.append(
+                (
+                    str(weights_dir),
+                    str(Path("yolo_dataset") / "runs" / "detect" / weights_dir.parent.name / "weights"),
+                )
             )
-        )
 
 datas += collect_many(collect_data_files, data_packages)
 
@@ -213,6 +211,33 @@ if PACKAGE_ML:
 binaries = collect_many(collect_dynamic_libs, binary_packages)
 binaries += _tk_binaries
 
+excludes = [
+    "IPython",
+    "jupyter",
+    "matplotlib",
+    "notebook",
+    "numpy.tests",
+    "pandas.tests",
+    "PIL.ImageQt",
+    "scipy",
+    "setuptools.tests",
+]
+
+if not PACKAGE_ML:
+    excludes += [
+        "Cython",
+        "paddle",
+        "paddleocr",
+        "torch",
+        "torchvision",
+        "torchaudio",
+        "ultralytics",
+        "yolo_dataset.auto_label",
+        "yolo_dataset.train_yolo",
+    ]
+else:
+    excludes += ["torch.testing"]
+
 a = Analysis(
     ["bootstrap.py"],
     pathex=[str(PROJECT_DIR), str(VENDOR_DIR)],
@@ -222,18 +247,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[
-        "IPython",
-        "jupyter",
-        "matplotlib",
-        "notebook",
-        "numpy.tests",
-        "pandas.tests",
-        "PIL.ImageQt",
-        "scipy",
-        "setuptools.tests",
-        "torch.testing",
-    ],
+    excludes=excludes,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=None,

@@ -10,6 +10,7 @@ import time
 import random
 from enum import Enum
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 
 class TaskState(Enum):
@@ -115,6 +116,12 @@ class BaseTask(ABC):
         #     return False  # 让任务自己的战斗处理接管
 
         return handled
+
+    def run_action_script(self, script_path: str | Path) -> bool:
+        """执行 YAML 动作脚本，便于把重复点击/等待流程外置配置。"""
+        from core.action_script import run_action_script
+
+        return run_action_script(script_path, self.ctx)
 
     def tick(self) -> TaskState:
         if self.state != TaskState.RUNNING:
