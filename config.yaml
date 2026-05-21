@@ -1,0 +1,103 @@
+ai:
+  anthropic:
+    api_key: ${ANTHROPIC_API_KEY}
+    model: claude-sonnet-4-6
+  custom:
+    api_key: ''
+    endpoint: ''
+    model: ''
+  enabled: true
+  ollama:
+    base_url: http://localhost:11434
+    model: llama3.2-vision
+  openai:
+    api_key: ${OPENAI_API_KEY}
+    base_url: https://api.openai.com/v1
+    model: gpt-5.4
+  provider: openai
+battle:
+  auto_battle_timeout: 30
+  check_interval: 0.5
+  default_action: attack
+  fallback_on_fail: true
+  max_wrong_clicks: 5
+  popup_detection: true
+  popup_templates:
+  - popup_flag_1.png
+  - popup_flag_2.png
+  skill_slot: 1
+  smart_targeting: true
+  target_strategy: auto
+  use_yolo_verify: true
+cloud_train:
+  server_url: http://localhost:9527
+game:
+  auto_move_window: true
+  hotkey_emergency: ctrl+shift+f2
+  hotkey_toggle: ctrl+shift+f1
+  window_size:
+  - 800
+  - 600
+  window_title: 梦幻西游
+  window_title_pattern: 梦幻西游 ONLINE.*
+ocr:
+  confidence_threshold: 0.7
+  lang: ch
+  use_angle_cls: true
+pathfinding:
+  click_variance: 3
+  grid_size: 8
+  move_timeout: 60
+  stuck_threshold: 5
+regions:
+  battle_command:
+  - 50
+  - 400
+  - 750
+  - 500
+  chat:
+  - 10
+  - 480
+  - 790
+  - 595
+  dialog:
+  - 100
+  - 380
+  - 700
+  - 560
+  minimap:
+  - 600
+  - 40
+  - 780
+  - 220
+  npc_list:
+  - 200
+  - 150
+  - 600
+  - 400
+  task_tracker:
+  - 610
+  - 240
+  - 790
+  - 370
+scene_detection:
+  enabled: true
+  match_threshold: 0.7
+  template_dir: data/templates/scenes
+tasks:
+  shimen:
+    auto_recover: true
+    master_template: master.png
+    max_rounds: 20
+    task_button_template: speak-task.png
+  zhuogui:
+    auto_formation: true
+    max_rounds: 10
+yolo:
+  classes:
+    0: cursor
+    1: npc
+  conf_threshold: 0.5
+  device: cuda
+  enabled: false
+  model_path: yolo_dataset/runs/detect/train/weights/best.pt

@@ -1,0 +1,13 @@
+# YOLOv8 数据集配置 — 合并 menghuanxiyou 成品数据
+
+path: .
+train: images/train
+val: images/val
+
+# 当前有 20 张训练图片 + 6 张验证图片（来自 menghuanxiyou）
+# 标注了 2 个类别，可继续扩展
+
+nc: 2
+names:
+  0: cursor        # shubiao — 鼠标光标
+  1: npc           # guanyin — 观音姐姐 / NPC

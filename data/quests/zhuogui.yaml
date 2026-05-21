@@ -1,0 +1,39 @@
+# 捉鬼任务配置
+
+# 钟馗位置
+zhongkui:
+  map: "阴曹地府"
+  coords: [120, 50]
+
+# 鬼可能出现的地图
+ghost_maps:
+  - "长安城"
+  - "建邺城"
+  - "长寿村"
+  - "傲来国"
+  - "朱紫国"
+  - "东海湾"
+  - "江南野外"
+  - "大唐国境"
+  - "大唐境外"
+  - "花果山"
+  - "长寿郊外"
+  - "北俱芦洲"
+
+# 鬼的类型及对应特征文字
+ghost_types:
+  - name: "僵尸"
+    keywords: ["僵尸"]
+  - name: "马面"
+    keywords: ["马面"]
+  - name: "牛头"
+    keywords: ["牛头"]
+  - name: "野鬼"
+    keywords: ["野鬼"]
+  - name: "骷髅怪"
+    keywords: ["骷髅"]
+
+# 天眼通符
+tianyan:
+  item_name: "天眼通符"
+  hotkey: "alt+t"

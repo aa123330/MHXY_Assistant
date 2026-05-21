@@ -1,0 +1,12 @@
+mss>=9.0.0
+opencv-python>=4.9.0
+numpy>=1.26.0,<2.0
+Pillow>=10.0.0
+pynput>=1.7.0
+pywin32>=306
+PyYAML>=6.0
+paddlepaddle==2.6.2
+paddleocr==2.9.1
+ultralytics>=8.2.0
+torch>=2.0.0
+pyautogui>=0.9.50

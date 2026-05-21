@@ -1,0 +1,38 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environments and vendored installs
+.venv/
+venv/
+env/
+vendor/
+
+# Build and packaged artifacts
+build/
+dist/
+*.spec.bak
+
+# Runtime/debug output
+debug/
+logs/
+*.log
+
+# Local-only config
+config.local.yaml
+*.local.yaml
+
+# YOLO training data and generated runs
+yolo_dataset/images/
+yolo_dataset/labels/
+yolo_dataset/runs/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

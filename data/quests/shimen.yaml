@@ -1,0 +1,65 @@
+# 师门任务配置
+# 各门派师傅名称和位置
+
+sects:
+  大唐官府:
+    master: "程咬金"
+    location: "长安城"
+  方寸山:
+    master: "菩提祖师"
+    location: "方寸山"
+  化生寺:
+    master: "空度禅师"
+    location: "长安城"
+  女儿村:
+    master: "孙婆婆"
+    location: "女儿村"
+  天宫:
+    master: "李靖"
+    location: "天宫"
+  龙宫:
+    master: "东海龙王"
+    location: "龙宫"
+  五庄观:
+    master: "镇元大仙"
+    location: "五庄观"
+  普陀山:
+    master: "观音姐姐"
+    location: "普陀山"
+  阴曹地府:
+    master: "地藏王"
+    location: "阴曹地府"
+  盘丝洞:
+    master: "白晶晶"
+    location: "盘丝洞"
+  狮驼岭:
+    master: "大大王"
+    location: "狮驼岭"
+  魔王寨:
+    master: "牛魔王"
+    location: "魔王寨"
+
+# 任务类型及对应的坐标点
+task_types:
+  demonstrate:    # 示威
+    maps:
+      - "长安城"
+      - "建邺城"
+      - "长寿村"
+      - "傲来国"
+      - "朱紫国"
+  deliver:        # 送信
+    npcs:
+      - "药店老板"
+      - "武器店老板"
+      - "杂货店老板"
+      - "当铺老板"
+  shopping:       # 购物
+    items:
+      - "金创药"
+      - "佛手"
+      - "天青地白"
+      - "十香返生丸"
+  patrol:         # 巡逻
+    area: "师门"
+    steps: 5
