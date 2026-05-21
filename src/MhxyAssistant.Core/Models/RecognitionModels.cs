@@ -18,6 +18,24 @@ public sealed record TemplateMatchResult(
     RectI BBox,
     PointI Center);
 
+public sealed record ColorFeaturePoint(
+    int OffsetX,
+    int OffsetY,
+    int Color);
+
+public sealed record ColorFeatureRule(
+    string Name,
+    int BaseColor,
+    IReadOnlyList<ColorFeaturePoint> Points,
+    int Similarity,
+    RectI SearchRegion);
+
+public sealed record ColorFeatureMatch(
+    string Name,
+    double Score,
+    PointI Point,
+    RectI SearchRegion);
+
 public enum GameState
 {
     Idle,

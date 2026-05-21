@@ -10,15 +10,15 @@ public abstract class AssistantTaskBase : IAssistantTask
 
     public async Task RunAsync(TaskContext context, CancellationToken cancellationToken)
     {
-        context.Log($"[任务] {Name} 开始");
-        await ExecuteAsync(context, cancellationToken);
-        context.Log($"[任务] {Name} 结束");
+        context.Log($"[task] {Name} started");
+        await ExecuteAsync(context, cancellationToken).ConfigureAwait(false);
+        context.Log($"[task] {Name} finished");
     }
 
     protected abstract Task ExecuteAsync(TaskContext context, CancellationToken cancellationToken);
 
     protected static async Task DelayAsync(int milliseconds, CancellationToken cancellationToken)
     {
-        await Task.Delay(milliseconds, cancellationToken);
+        await Task.Delay(milliseconds, cancellationToken).ConfigureAwait(false);
     }
 }

@@ -33,11 +33,58 @@ public sealed class CaptureService(IWindowService windows) : ICaptureService
         var hdc = g.GetHdc();
         try
         {
-            return NativeMethods.PrintWindow(hwnd, hdc, 0x00000001 | 0x00000002) ? bitmap : null;
+            if (NativeMethods.PrintWindow(hwnd, hdc, 0x00000001 | 0x00000002))
+                return bitmap;
         }
         finally
         {
             g.ReleaseHdc(hdc);
+        }
+
+        bitmap.Dispose();
+        return CaptureClientWithBitBlt(hwnd);
+    }
+
+    private Bitmap? CaptureClientWithBitBlt(nint hwnd)
+    {
+        var size = windows.GetClientSize(hwnd);
+        if (size.Width <= 0 || size.Height <= 0)
+            return null;
+
+        var window = windows.GetWindowRect(hwnd);
+        var client = windows.GetClientRect(hwnd);
+        var srcX = client.Left - window.Left;
+        var srcY = client.Top - window.Top;
+        var windowDc = NativeMethods.GetWindowDC(hwnd);
+        if (windowDc == nint.Zero)
+            return null;
+
+        var memDc = nint.Zero;
+        var hBitmap = nint.Zero;
+        var old = nint.Zero;
+        try
+        {
+            memDc = NativeMethods.CreateCompatibleDC(windowDc);
+            hBitmap = NativeMethods.CreateCompatibleBitmap(windowDc, size.Width, size.Height);
+            if (memDc == nint.Zero || hBitmap == nint.Zero)
+                return null;
+
+            old = NativeMethods.SelectObject(memDc, hBitmap);
+            if (!NativeMethods.BitBlt(memDc, 0, 0, size.Width, size.Height, windowDc, srcX, srcY, NativeMethods.Srccopy))
+                return null;
+
+            using var captured = Image.FromHbitmap(hBitmap);
+            return new Bitmap(captured);
+        }
+        finally
+        {
+            if (old != nint.Zero && memDc != nint.Zero)
+                NativeMethods.SelectObject(memDc, old);
+            if (hBitmap != nint.Zero)
+                NativeMethods.DeleteObject(hBitmap);
+            if (memDc != nint.Zero)
+                NativeMethods.DeleteDC(memDc);
+            NativeMethods.ReleaseDC(hwnd, windowDc);
         }
     }
 }

@@ -1,0 +1,4 @@
+# 多点找色特征库，格式兼容触动/FreeGame 风格：
+# name={0xRRGGBB,"dx|dy|0xRRGGBB,dx|dy|0xRRGGBB",similarity,x1,y1,x2,y2};
+# 示例需要按真实游戏截图取色后再启用：
+# close_button={0xF2F2F2,"4|0|0xD64A4A,8|0|0xF2F2F2",85,700,20,790,90};

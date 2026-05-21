@@ -35,10 +35,13 @@ config.local.yaml
 *.local.yaml
 
 # YOLO training data and generated runs
-yolo_dataset/images/
-yolo_dataset/labels/
-yolo_dataset/runs/
-yolo_dataset/models/*.pt
+tools/ml/images/
+tools/ml/labels/
+tools/ml/runs/
+tools/ml/models/
+tools/ml/*.pt
+models/yolo/*.pt
+models/yolo/*.onnx
 
 # OS/editor noise
 .DS_Store

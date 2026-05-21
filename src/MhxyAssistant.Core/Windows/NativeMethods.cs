@@ -19,6 +19,7 @@ internal static class NativeMethods
     internal const uint InputMouse = 0;
     internal const uint InputKeyboard = 1;
     internal const uint KeyEventFKeyUp = 0x0002;
+    internal const int Srccopy = 0x00CC0020;
 
     internal delegate bool EnumWindowsProc(nint hwnd, nint lParam);
 
@@ -78,6 +79,30 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     internal static extern bool PrintWindow(nint hwnd, nint hdcBlt, uint flags);
+
+    [DllImport("user32.dll")]
+    internal static extern nint GetWindowDC(nint hWnd);
+
+    [DllImport("user32.dll")]
+    internal static extern int ReleaseDC(nint hWnd, nint hDC);
+
+    [DllImport("gdi32.dll")]
+    internal static extern nint CreateCompatibleDC(nint hdc);
+
+    [DllImport("gdi32.dll")]
+    internal static extern nint CreateCompatibleBitmap(nint hdc, int cx, int cy);
+
+    [DllImport("gdi32.dll")]
+    internal static extern nint SelectObject(nint hdc, nint h);
+
+    [DllImport("gdi32.dll")]
+    internal static extern bool BitBlt(nint hdc, int x, int y, int cx, int cy, nint hdcSrc, int x1, int y1, int rop);
+
+    [DllImport("gdi32.dll")]
+    internal static extern bool DeleteObject(nint ho);
+
+    [DllImport("gdi32.dll")]
+    internal static extern bool DeleteDC(nint hdc);
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct RECT

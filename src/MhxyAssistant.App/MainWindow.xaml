@@ -34,15 +34,17 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,12">
+                <UniformGrid Grid.Row="0" Columns="6" Margin="0,0,0,12">
                     <Button Content="截图" Margin="4" Command="{Binding CaptureCommand}" />
                     <Button Content="YOLO 预览" Margin="4" Command="{Binding YoloPreviewCommand}" />
-                    <Button Content="AI 设置" Margin="4" Command="{Binding AiSettingsCommand}" />
-                    <Button Content="导出诊断包" Margin="4" Command="{Binding ExportDiagnosticsCommand}" />
+                    <Button Content="训练/标注" Margin="4" Command="{Binding YoloTrainingCommand}" />
+                    <Button Content="AI 助手" Margin="4" Command="{Binding AiSettingsCommand}" />
+                    <Button Content="云端" Margin="4" Command="{Binding CloudCommand}" />
+                    <Button Content="诊断包" Margin="4" Command="{Binding ExportDiagnosticsCommand}" />
                 </UniformGrid>
 
                 <TextBox Grid.Row="1"
-                         Text="{Binding LogText}"
+                         Text="{Binding LogText, Mode=OneWay}"
                          FontFamily="Consolas"
                          FontSize="13"
                          IsReadOnly="True"

@@ -149,8 +149,8 @@ public sealed class InputService : IInputService
         if (bounds is null)
             return point;
         return new PointI(
-            Math.Max(bounds.Value.Left, Math.Min(point.X, bounds.Value.Right)),
-            Math.Max(bounds.Value.Top, Math.Min(point.Y, bounds.Value.Bottom)));
+            Math.Max(bounds.Value.Left, Math.Min(point.X, bounds.Value.Right - 1)),
+            Math.Max(bounds.Value.Top, Math.Min(point.Y, bounds.Value.Bottom - 1)));
     }
 
     private void MoveAway(PointI point)

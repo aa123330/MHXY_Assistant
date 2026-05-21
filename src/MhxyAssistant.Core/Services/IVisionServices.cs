@@ -21,6 +21,12 @@ public interface IColorDetector
 
 public readonly record struct HsvRange(double HMin, double SMin, double VMin, double HMax, double SMax, double VMax);
 
+public interface IMultiColorFeatureDetector
+{
+    bool TryParseRule(string name, string definition, out ColorFeatureRule rule);
+    ColorFeatureMatch? Match(Bitmap source, ColorFeatureRule rule);
+}
+
 public interface IImageHasher
 {
     string Compute(Bitmap source);

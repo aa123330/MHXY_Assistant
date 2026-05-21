@@ -82,6 +82,9 @@ regions:
   - 240
   - 790
   - 370
+vision_features:
+  enabled: true
+  feature_library_path: data/features/page.txt
 scene_detection:
   enabled: true
   match_threshold: 0.7
@@ -100,6 +103,6 @@ yolo:
     0: cursor
     1: npc
   conf_threshold: 0.5
-  device: cuda
+  device: cpu
   enabled: false
-  model_path: yolo_dataset/runs/detect/train/weights/best.pt
+  model_path: models/yolo/best.onnx
